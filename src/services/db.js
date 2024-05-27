@@ -1,11 +1,9 @@
-const mysql = require("mysql");
+const {Firestore} = require('@google-cloud/firestore');
 
-// configuration server mysql connection
-const db = mysql.createPool({
-  host: "localhost",
-  user: "root",
-  password: "12345678",
-  database: "db_indonesian_food_recipes",
+// Create a new client
+const firestore = new Firestore({
+  projectId: 'my-project-1-416523',
+  keyFilename: "my-project-1-416523-c7d437834c9c.json",
 });
 
-module.exports = db;
+module.exports = firestore;

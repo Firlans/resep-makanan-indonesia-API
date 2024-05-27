@@ -1,11 +1,32 @@
 "use strict";
 
-const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
 
-const connection = require("../services/storeData");
+const store = require("../services/storeData");
+
+const authentication = (req, res, next) => {
+  const authHeader = req.header("Authorization");
+  if (!authHeader) {
+    return res.status(401).json({ message: "No token, authorization denied" });
+  }
+  const token = authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ message: "No token, authorization denied" });
+  }
+  
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (err) {
+    res.status(401).json({ message: "Token is not valid" });
+  }
+};
 
 const login = async (req, res) => {
   const { email, password } = req.query;
+
   // validate data
   if (!email || !password) {
     return res.status(400).json({
@@ -15,21 +36,41 @@ const login = async (req, res) => {
   }
 
   try {
-    const users = await connection.getUsers();
-    
+    const users = await store.getUsers();
+
+    // validate data user from database
+    if (users.length === 0) {
+      return res.status(401).json({
+        status: "fail",
+        message: "email not registered",
+      });
+    }
+
     users.map((user, index) => {
       if (user.email == email && user.password === password) {
+        const token = jwt.sign(
+          { id: user.id, email: user.email, idAvatar: user.idAvatar },
+          process.env.JWT_SECRET,
+          { expiresIn: "1h" }
+        );
+
         return res.status(200).json({
           status: "success",
           message: "Login successful",
-          data: user
+          token,
         });
-      }else if (user.email === email && user.password !== password) {
-        return res.status(401).json({ 
+        // return res.status(200).json({
+        //   status: "success",
+        //   message: "Login successful",
+        //   data: user
+        // });
+      } else if (user.email === email && user.password !== password) {
+        return res.status(401).json({
           status: "fail",
-          message: "Invalid password" });
+          message: "Invalid password",
+        });
       }
-      if (index+1 === users.length) {
+      if (index + 1 === users.length) {
         return res.status(401).json({
           status: "fail",
           message: "email not registered",
@@ -37,7 +78,7 @@ const login = async (req, res) => {
       }
     });
   } catch (error) {
-    if(error){
+    if (error) {
       console.error(error);
       return error;
     }
@@ -49,7 +90,7 @@ const login = async (req, res) => {
 const register = async (req, res) => {
   const { email, name, password, avatar } = req.query;
   try {
-    const users = await connection.getUsers();
+    const users = await store.getUsers();
     // validate data
     if (!email || !name || !password) {
       res.status(400).json({
@@ -67,17 +108,12 @@ const register = async (req, res) => {
       }
     });
 
-    const id = crypto.randomUUID();
     const createdAt = new Date().toISOString();
     const updatedAt = createdAt;
-    const idAvatar = avatar ? (idAvatar = crypto.randomUUID()) : "default";
-
-    const query =
-      "INSERT INTO users (id, name, email, password, idAvatar) VALUES (?, ?, ?, ?, ?)";
+    const idAvatar = avatar ? (idAvatar = nanoid(4)) : "default";
 
     // user data variable
     const user = {
-      id,
       email,
       name,
       password,
@@ -86,12 +122,13 @@ const register = async (req, res) => {
       updatedAt,
     };
 
-    const values = [id, name, email, password, idAvatar];
-    await connection.saveData(query, values);
+    const values = [name, email, password, idAvatar];
+    store.addUser(user);
+
     return res.status(201).json({
       status: "success",
       message: "user registered successfully",
-      data: { id, email, name, idAvatar },
+      data: { email, name, idAvatar },
     });
   } catch (error) {
     console.error(error);
@@ -99,7 +136,17 @@ const register = async (req, res) => {
   }
 };
 
+const resetPassword = (req, res) => {
+  const userId = req.params.user_id;
+  res.status(200).json({
+    status: "success",
+    message: "your password have reseted",
+  });
+};
+
 module.exports = {
   login,
   register,
+  resetPassword,
+  authentication,
 };

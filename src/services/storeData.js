@@ -1,44 +1,39 @@
-const db = require("./db");
+const firestore = require('./db');
 
-// save data user
-const saveData = (query, values) => {
-  return new Promise((resolve, reject) => {
-    db.query(query, values, (error, results, fields) => {
-      if (error) {
-        console.error("Error executing query:", error);
-        return reject(error);
-      }
-      resolve(results);
-    });
-  });
+const addUser = async (data) => {
+  try {
+    const docRef = await firestore.collection('users').add(data);
+    console.log('Document written with ID: ', docRef.id);
+    return docRef;
+  } catch (error) {
+    console.error('Error adding document: ', error);
+  }
 };
 
-// // get user to login
-// const getUser = (values, callback) => {
-//   return new Promise((resolve, reject) => {
-//     const query =
-//       "SELECT name, email, idAvatar FROM users WHERE email = ? AND password = ?";
-//     db.query(query, values, (error, results) => {
-//       if (error) {
-//         console.error(error);
-//         return callback(error);
-//       }
-//       callback(null, results);
-//     });
-//   })
-// };
+const getUsers = async () => {
+  try {
+    const usersCollection = firestore.collection('users');
+    const snapshot = await usersCollection.get();
 
-// get all users
-const getUsers = () => {
-  return new Promise((resolve, reject) => {
-      const query = "SELECT * FROM users";
-      db.query(query, (error, results) => {
-          if (error) {
-              return reject(error);
-          }
-          resolve(results);
+    if (snapshot.empty) {
+      console.log('No matching documents.');
+      return [];
+    }
+
+    const users = [];
+    snapshot.forEach(doc => {
+      users.push({
+        id: doc.id,
+        ...doc.data()
       });
-  });
+    });
+
+    return users;
+  } catch (error) {
+    console.error('Error getting documents: ', error);
+    throw error;
+  }
 };
 
-module.exports = { saveData, getUsers };
+
+module.exports = {addUser, getUsers}
