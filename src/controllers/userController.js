@@ -76,7 +76,7 @@ const register = async (req, res) => {
     const users = await store.getUsers();
     // validate data
     if (!email || !name || !password) {
-      res.status(400).json({
+      return res.status(400).json({
         status: "fail",
         message: "email, name, password is required",
       });
@@ -84,20 +84,21 @@ const register = async (req, res) => {
 
     // email validation
     if (!emailValidation.isValidEmailFormat) {
-      res.json({
+      return res.json({
         status: "fail",
         message: "Invalid email format.",
       });
     }
 
-    users.map((user) => {
-      if (email === user.email) {
-        return res.status(409).json({
-          status: "fail",
-          message: "email already exists",
-        });
-      }
-    });
+    const duplicateAccount = users.find((user) => email === user.email);
+
+    console.log(duplicateAccount);
+    if (duplicateAccount) {
+      return res.status(409).json({
+        status: "fail",
+        message: "email already exists",
+      });
+    }
 
     emailValidation.checkDomain(email, (isValidDomain) => {
       if (!isValidDomain) {
@@ -105,9 +106,10 @@ const register = async (req, res) => {
       }
 
       emailValidation.sendVerificationEmail(email, name, password);
-      return res
-        .status(200)
-        .json({ message: "Please check your email to verify your address." });
+      return res.status(200).json({
+        status: "success",
+        message: "Please check your email to verify your address.",
+      });
     });
   } catch (error) {
     console.error(error);
@@ -115,6 +117,7 @@ const register = async (req, res) => {
   }
 };
 
+// email verification handler
 const verifyEmail = async (req, res) => {
   const token = req.query.token;
 
@@ -168,6 +171,7 @@ const forgetPassword = (req, res) => {
   });
 };
 
+// edit profile handler
 const editProfile = async (req, res) => {
   const file = req.file;
   const user = req.user;
