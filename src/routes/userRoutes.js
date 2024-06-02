@@ -8,26 +8,26 @@ const {
   login,
   forgetPassword,
   editProfile,
-  verifyEmail
+  verifyEmail,
+  getProfile,
+  resetPassword
 } = require("../controllers/userController");
 const authorization = require("../services/auth");
 
 const router = express.Router();
 
 router.get("/login", login);
-router.post("/register", register);
-router.get('/verify-email', verifyEmail);
-router.get("/profile", authorization, (req, res) => {
-  return res.json(req.user);
-});
-router.post("/forget_password", forgetPassword);
+router.get("/register", register);
+router.post("/verify-email", verifyEmail);
+router.get("/profile", authorization, getProfile);
+router.get("/forget-password", forgetPassword);
 router.post(
   "/profile/edit",
   authorization,
   upload.single("avatar"),
   editProfile
 );
-
-// router.delete("/delete_account", deleteAccount);
+router.post("/reset-password", resetPassword);
+// router.delete("/:user/delete", deleteAccount);
 
 module.exports = router;

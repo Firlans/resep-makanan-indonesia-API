@@ -14,7 +14,9 @@ const updateUser = async (userId, userData) => {
   try {
     const docRef = await firestore.collection("users").doc(userId).update({
       name: userData.name,
+      password : userData.password,
       phoneNumber: userData.phoneNumber,
+      idAvatar : userData.idAvatar,
       updatedAt: new Date().toISOString()
     });
   } catch (error) {

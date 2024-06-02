@@ -4,6 +4,7 @@ const jwt = require("jsonwebtoken");
 const { uploadToGCS } = require("../services/upload");
 const emailValidation = require("../services/emailValidation");
 const store = require("../services/storeData");
+const generateToken = require("../services/generateToken");
 
 // login handler
 const login = async (req, res) => {
@@ -27,38 +28,34 @@ const login = async (req, res) => {
         message: "email not registered",
       });
     }
+    const userAccount = users.find((user) => user.email === email);
+    // email validation
+    if (!userAccount) {
+      return res.status(401).json({
+        status: "fail",
+        message: "email not registered",
+      });
+    }
 
-    users.map((user, index) => {
-      if (user.email == email && user.password === password) {
-        const token = jwt.sign(
-          {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            phoneNumber: user.phoneNumber,
-            idAvatar: user.idAvatar,
-          },
-          process.env.JWT_SECRET,
-          { expiresIn: "1h" }
-        );
+    // password validation
+    if (userAccount.password !== password) {
+      return res.status(401).json({
+        status: "fail",
+        message: "Invalid password",
+      });
+    }
+    const token = generateToken(
+      userAccount.email,
+      userAccount.id,
+      userAccount.name,
+      userAccount.phoneNumber,
+      userAccount.idAvatar
+    );
 
-        return res.status(200).json({
-          status: "success",
-          message: "Login successful",
-          token,
-        });
-      } else if (user.email === email && user.password !== password) {
-        return res.status(401).json({
-          status: "fail",
-          message: "Invalid password",
-        });
-      }
-      if (index + 1 === users.length) {
-        return res.status(401).json({
-          status: "fail",
-          message: "email not registered",
-        });
-      }
+    return res.status(200).json({
+      status: "success",
+      message: "Login successful",
+      token,
     });
   } catch (error) {
     if (error) {
@@ -92,7 +89,6 @@ const register = async (req, res) => {
 
     const duplicateAccount = users.find((user) => email === user.email);
 
-    console.log(duplicateAccount);
     if (duplicateAccount) {
       return res.status(409).json({
         status: "fail",
@@ -100,12 +96,15 @@ const register = async (req, res) => {
       });
     }
 
-    emailValidation.checkDomain(email, (isValidDomain) => {
+    emailValidation.checkDomain(email, async (isValidDomain) => {
       if (!isValidDomain) {
         return res.status(400).json({ error: "Invalid email domain." });
       }
-
-      emailValidation.sendVerificationEmail(email, name, password);
+      const token = generateToken(email, name, password);
+      const verificationUrl = `${process.env.BASE_URL}${process.env.PORT}/verify-email?token=${token}`;
+      const text =
+        "Please verify your email address by clicking the following link";
+      await emailValidation.sendVerificationEmail(verificationUrl, email, text);
       return res.status(200).json({
         status: "success",
         message: "Please check your email to verify your address.",
@@ -136,6 +135,16 @@ const verifyEmail = async (req, res) => {
         return decoded;
       }
     );
+
+    const users = await store.getUsers();
+    const duplicateAccount = users.find((userData) => userData.email === email);
+    if (duplicateAccount) {
+      return res.status(400).json({
+        status: "fail",
+        message: "email is already exist",
+      });
+    }
+
     const createdAt = new Date().toISOString();
     const updatedAt = createdAt;
     const idAvatar = "avatar-0";
@@ -149,7 +158,6 @@ const verifyEmail = async (req, res) => {
       createdAt,
       updatedAt,
     };
-    const users = await store.getUsers();
     await store.addUser(user);
 
     return res.status(201).json({
@@ -163,12 +171,30 @@ const verifyEmail = async (req, res) => {
 };
 
 // forget password handler
-const forgetPassword = (req, res) => {
-  const userId = req.params.user_id;
-  res.status(200).json({
-    status: "success",
-    message: "your password have reseted",
-  });
+const forgetPassword = async (req, res) => {
+  try {
+    const { email, newPassword } = req.query;
+    const users = await store.getUsers();
+    const isEvailable = users.find((userData) => userData.email === email);
+    if (!isEvailable) {
+      res.status(401).json({
+        status: "fail",
+        message: "email is not registered yet",
+      });
+    }
+    const token = generateToken(email, "", "", "", "", newPassword);
+    const verificationUrl = `${process.env.BASE_URL}${process.env.PORT}/reset-password?token=${token}`;
+    const text = "please clicking this link for reset your password";
+    await emailValidation.sendVerificationEmail(verificationUrl, email, text);
+
+    res.status(200).json({
+      status: "success",
+      message: "Please check your email to verify your address",
+    });
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
 };
 
 // edit profile handler
@@ -177,11 +203,12 @@ const editProfile = async (req, res) => {
   const user = req.user;
   const edited = req.query;
 
-  // data validate
+  // data validation
   if (!file) {
     return res.status(400).json({ message: "Please upload a file!" });
   }
 
+  // data changed validation
   if (!edited) {
     res.status(400).json({
       status: "fail",
@@ -224,10 +251,68 @@ const editProfile = async (req, res) => {
   }
 };
 
+// get profile handler
+const getProfile = (req, res) => {
+  const user = req.user;
+  if (!user) {
+    res.status(400).json({
+      status: "fail",
+      message: "user account is not available",
+    });
+  }
+
+  return res.status(200).json({
+    status: "success",
+    data: user,
+  });
+};
+
+// reset password handler
+const resetPassword = async (req, res) => {
+  const { token } = req.query;
+
+  if (!token) {
+    return res.status(400).json({ error: "Invalid verification link." });
+  }
+  try {
+    const { email, password } = jwt.verify(
+      token,
+      process.env.JWT_SECRET,
+      (err, decoded) => {
+        if (err) {
+          return res.status(400).json({ error: "Invalid or expired token." });
+        }
+        return decoded;
+      }
+    );
+    const users = await store.getUsers();
+    const userAccount = users.find((userData) => userData.email === email);
+    if (!userAccount) {
+      return res.status(400).json({
+        status: "fail",
+        message: "email is not regitered yet",
+      });
+    }
+
+    console.log(userAccount.password);
+    userAccount.password = password;
+    console.log(userAccount.password);
+    await store.updateUser(userAccount.id, userAccount);
+
+    res.status(201).json({
+      status: "success",
+      message: "password has reseted",
+    });
+  } catch (error) {
+    console.error(error);
+  }
+};
 module.exports = {
   login,
   register,
   forgetPassword,
   editProfile,
   verifyEmail,
+  getProfile,
+  resetPassword,
 };

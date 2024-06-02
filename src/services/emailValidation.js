@@ -2,7 +2,6 @@ require("dotenv").config();
 
 const dns = require("dns");
 const nodemailer = require("nodemailer");
-const jwt = require("jsonwebtoken");
 
 function isValidEmailFormat(email) {
   const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -20,7 +19,7 @@ function checkDomain(email, callback) {
   });
 }
 
-async function sendVerificationEmail(email, name, password) {
+async function sendVerificationEmail(verificationUrl, email, message) {
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
@@ -29,26 +28,12 @@ async function sendVerificationEmail(email, name, password) {
     },
   });
   try {
-
-
-    const token = jwt.sign(
-      {
-        email: email,
-        name: name,
-        password: password,
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" }
-    );
-
-    const verificationUrl = `${process.env.BASE_URL}${process.env.PORT}/verify-email?token=${token}`;
-
     const mailOptions = {
       from: process.env.EMAIL_ACCOUNT,
       to: email,
       subject: "Email Verification",
-      text: "Please verify your email address by clicking the following link",
-      html: `<p>Please verify your email address by clicking the following link: <a href="${verificationUrl}">[Verification Link]</a></p>`,
+      text: message,
+      html: `<p>${message}: <a href="${verificationUrl}">[Verification Link]</a></p>`,
     };
 
     transporter.sendMail(mailOptions, (error, info) => {  
