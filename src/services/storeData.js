@@ -1,44 +1,49 @@
-const db = require("./db");
+// src/services/storeData.js
+const db = require('./db.js');
 
-// save data user
-const saveData = (query, values) => {
-  return new Promise((resolve, reject) => {
-    db.query(query, values, (error, results, fields) => {
-      if (error) {
-        console.error("Error executing query:", error);
-        return reject(error);
-      }
-      resolve(results);
-    });
-  });
+// get ingredients
+const getIngredients = async () => {
+    const snapshot = await db.collection('ingredients').get();
+    const ingredients = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return ingredients;
 };
 
-// // get user to login
-// const getUser = (values, callback) => {
-//   return new Promise((resolve, reject) => {
-//     const query =
-//       "SELECT name, email, idAvatar FROM users WHERE email = ? AND password = ?";
-//     db.query(query, values, (error, results) => {
-//       if (error) {
-//         console.error(error);
-//         return callback(error);
-//       }
-//       callback(null, results);
-//     });
-//   })
-// };
-
-// get all users
-const getUsers = () => {
-  return new Promise((resolve, reject) => {
-      const query = "SELECT * FROM users";
-      db.query(query, (error, results) => {
-          if (error) {
-              return reject(error);
-          }
-          resolve(results);
-      });
-  });
+// GET ingredients by id
+const getIngredientById = async (id) => {
+    const doc = await db.collection('ingredients').doc(id.toString()).get();
+    if (!doc.exists) {
+        return null;
+    }
+    return { id: doc.id, ...doc.data() };
 };
 
-module.exports = { saveData, getUsers };
+// get recipes
+const getRecipes = async () => {
+    const snapshot = await db.collection('recipes').get();
+    const recipes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return recipes;
+};
+
+// get recipes by id
+const getRecipeById = async (id) => {
+    const doc = await db.collection('recipes').doc(id.toString()).get();
+    if (!doc.exists) {
+        return null;
+    }
+    return { id: doc.id, ...doc.data() };
+};
+
+//menambahkan resep
+const addIngredient = async (ingredient) => {
+  const docRef = await db.collection('ingredients').add(ingredient);
+  const newIngredient = await docRef.get();
+  return { id: newIngredient.id, ...newIngredient.data() };
+};
+
+module.exports = {
+    getIngredients,
+    getIngredientById,
+    getRecipes,
+    getRecipeById,
+    addIngredient
+};
