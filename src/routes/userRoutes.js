@@ -10,24 +10,25 @@ const {
   editProfile,
   verifyEmail,
   getProfile,
-  resetPassword
+  resetPassword,
+  deleteAccount
 } = require("../controllers/userController");
 const authorization = require("../services/auth");
 
 const router = express.Router();
 
 router.get("/login", login);
-router.get("/register", register);
-router.post("/verify-email", verifyEmail);
+router.post("/register", register);
+router.get("/verify-email", verifyEmail);
 router.get("/profile", authorization, getProfile);
-router.get("/forget-password", forgetPassword);
+router.post("/forget-password", forgetPassword);
 router.post(
   "/profile/edit",
   authorization,
   upload.single("avatar"),
   editProfile
 );
-router.post("/reset-password", resetPassword);
-// router.delete("/:user/delete", deleteAccount);
+router.get("/reset-password", resetPassword);
+router.delete("/:user/delete", deleteAccount);
 
 module.exports = router;

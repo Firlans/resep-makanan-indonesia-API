@@ -3,8 +3,8 @@ const multer = require("multer");
 const path = require("path");
 
 const storage = new Storage({
-  projectId: "your-google-cloud-project-id",
-  keyFilename: "my-project-1-416523-c7d437834c9c.json",
+  projectId: process.env.ID_PROJECT,
+  keyFilename: process.env.SERVICE_ACCOUNT,
 });
 
 
@@ -22,11 +22,10 @@ const upload = multer({
 });
 
 // Fungsi untuk mengunggah file ke Google Cloud Storage
-const uploadToGCS = (file, id_user, bucketName) => {
+const uploadToGCS = (file, fileName, bucketName) => {
   const bucket = storage.bucket(bucketName);
   return new Promise((resolve, reject) => {
-    const filename = `avatar-${id_user}${path.extname(file.originalname)}`;
-    const blob = bucket.file(filename);
+    const blob = bucket.file(fileName);
     const blobStream = blob.createWriteStream({
       resumable: false,
       gzip: true,

@@ -5,7 +5,7 @@ const { uploadToGCS } = require("../services/upload");
 const emailValidation = require("../services/emailValidation");
 const store = require("../services/storeData");
 const generateToken = require("../services/generateToken");
-
+const path = require("path")
 // login handler
 const login = async (req, res) => {
   const { email, password } = req.query;
@@ -44,13 +44,15 @@ const login = async (req, res) => {
         message: "Invalid password",
       });
     }
-    const token = generateToken(
-      userAccount.email,
-      userAccount.id,
-      userAccount.name,
-      userAccount.phoneNumber,
-      userAccount.idAvatar
-    );
+
+    const dataClient = {
+      email: userAccount.email,
+      id: userAccount.id,
+      name: userAccount.name,
+      phoneNumber: userAccount.phoneNumber,
+      idAvatar: userAccount.idAvatar,
+    };
+    const token = generateToken(dataClient);
 
     return res.status(200).json({
       status: "success",
@@ -100,7 +102,8 @@ const register = async (req, res) => {
       if (!isValidDomain) {
         return res.status(400).json({ error: "Invalid email domain." });
       }
-      const token = generateToken(email, name, password);
+      const data = { email, name, password };
+      const token = generateToken(data);
       const verificationUrl = `${process.env.BASE_URL}${process.env.PORT}/verify-email?token=${token}`;
       const text =
         "Please verify your email address by clicking the following link";
@@ -162,7 +165,7 @@ const verifyEmail = async (req, res) => {
 
     return res.status(201).json({
       status: "success",
-      message: "Email successfully verified!",
+      message: "Email successfully verified!  ",
     });
   } catch (error) {
     console.error(error);
@@ -173,19 +176,23 @@ const verifyEmail = async (req, res) => {
 // forget password handler
 const forgetPassword = async (req, res) => {
   try {
-    const { email, newPassword } = req.query;
+    const data = req.query;
     const users = await store.getUsers();
-    const isEvailable = users.find((userData) => userData.email === email);
+    const isEvailable = users.find((userData) => userData.email === data.email);
     if (!isEvailable) {
       res.status(401).json({
         status: "fail",
         message: "email is not registered yet",
       });
     }
-    const token = generateToken(email, "", "", "", "", newPassword);
+    const token = generateToken(data);
     const verificationUrl = `${process.env.BASE_URL}${process.env.PORT}/reset-password?token=${token}`;
     const text = "please clicking this link for reset your password";
-    await emailValidation.sendVerificationEmail(verificationUrl, email, text);
+    await emailValidation.sendVerificationEmail(
+      verificationUrl,
+      data.email,
+      text
+    );
 
     res.status(200).json({
       status: "success",
@@ -216,7 +223,7 @@ const editProfile = async (req, res) => {
     });
   }
 
-  const avatarBucket = "my-project-avatar-bucket";
+  const avatarBucket = process.env.AVATAR_BUCKET;
 
   try {
     const dbUsers = await store.getUsers();
@@ -226,28 +233,29 @@ const editProfile = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    await store.updateUser(user.id, edited);
-
+    const idAvatar = file? `avatar-${user.id}${path.extname(file.originalname)}` : "avatar-0";
     userData.name = edited.name;
     userData.phoneNumber = edited.phoneNumber;
+    userData.idAvatar = idAvatar;
 
-    const newToken = jwt.sign(
-      {
-        id: userData.id,
-        email: userData.email,
-        name: userData.name,
-        phoneNumber: userData.phoneNumber,
-        idAvatar: userData.idAvatar,
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" }
-    );
+    await store.updateUser(user.id, userData);
 
-    await uploadToGCS(file, user.id, avatarBucket);
+    const dataClient = {
+      id: userData.id,
+      email: userData.email,
+      name: userData.name,
+      phoneNumber: userData.phoneNumber,
+      idAvatar: userData.idAvatar,
+    };
+    const newToken = generateToken(dataClient);
+    await uploadToGCS(file, idAvatar, avatarBucket);
     res.json({ message: "Profile updated successfully", token: newToken });
   } catch (error) {
     console.error(error);
-    res.send("gagal menyimpan");
+    res.status(400).json({
+      status: "fail",
+      message: "gagal menyimpan",
+    });
   }
 };
 
@@ -275,7 +283,7 @@ const resetPassword = async (req, res) => {
     return res.status(400).json({ error: "Invalid verification link." });
   }
   try {
-    const { email, password } = jwt.verify(
+    const { email, newPassword } = jwt.verify(
       token,
       process.env.JWT_SECRET,
       (err, decoded) => {
@@ -294,9 +302,8 @@ const resetPassword = async (req, res) => {
       });
     }
 
-    console.log(userAccount.password);
-    userAccount.password = password;
-    console.log(userAccount.password);
+    userAccount.password = newPassword;
+
     await store.updateUser(userAccount.id, userAccount);
 
     res.status(201).json({
@@ -307,6 +314,36 @@ const resetPassword = async (req, res) => {
     console.error(error);
   }
 };
+
+// delete account hanlder
+const deleteAccount = async (req, res) => {
+  const user = req.user;
+  if (!user.email) {
+    res.status(400).json({
+      status: "fail",
+      message: "email is required",
+    });
+  }
+
+  try {
+    const users = await store.getUsers();
+
+    const userTarget = users.find((userData) => userData.email === user.email);
+    if (!userTarget) {
+      res.status(400).json({
+        status: "fail",
+        message: "account is not available",
+      });
+    }
+    const token = generateToken(user.id)
+    const verificationUrl = `${process.env.BASE_URL}${process.env.PORT}/delete?token=${token}`;
+    emailValidation.sendVerificationEmail();
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+};
+
 module.exports = {
   login,
   register,
@@ -315,4 +352,5 @@ module.exports = {
   verifyEmail,
   getProfile,
   resetPassword,
+  deleteAccount,
 };
