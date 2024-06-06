@@ -80,7 +80,7 @@ const getIngredientsDetails = async (req, res) => {
 
 // mengambil data resep berdasarkan id
 const getRecipeDetails = async (req, res) => {
-    const recipeId = parseInt(req.query.id);
+    const recipeId = req.params.id
     try {
         const recipe = await getRecipeById(recipeId);
         if (recipe) {

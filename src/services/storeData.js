@@ -84,7 +84,7 @@ const updateIngredient = async (id, updateData, file) => {
         updateData.id_picture = imageUrl;
     }
     await db.collection('ingredients').doc(id.toString()).update(updateData);
-    const updatedIngredient = await db.collection('ingredients').doc(id.string()).get();
+    const updatedIngredient = await db.collection('ingredients').doc(id.toString()).get();
     return { id: updatedIngredient.id, ...updatedIngredient.data() };
 };
 
