@@ -1,11 +1,15 @@
 "use strict";
 
 const jwt = require("jsonwebtoken");
+const path = require("path")
+const bcrypt = require('bcrypt');
+
 const { uploadToGCS } = require("../services/upload");
 const emailValidation = require("../services/emailValidation");
 const store = require("../services/storeData");
 const generateToken = require("../services/generateToken");
-const path = require("path")
+
+
 // login handler
 const login = async (req, res) => {
   const { email, password } = req.query;
@@ -38,7 +42,8 @@ const login = async (req, res) => {
     }
 
     // password validation
-    if (userAccount.password !== password) {
+    const match = await bcrypt.compare(password, userAccount.password);
+    if (!match) {
       return res.status(401).json({
         status: "fail",
         message: "Invalid password",
@@ -97,12 +102,14 @@ const register = async (req, res) => {
         message: "email already exists",
       });
     }
-
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    console.log(hashedPassword);
     emailValidation.checkDomain(email, async (isValidDomain) => {
       if (!isValidDomain) {
         return res.status(400).json({ error: "Invalid email domain." });
       }
-      const data = { email, name, password };
+      const data = { email, name, hashedPassword };
       const token = generateToken(data);
       const verificationUrl = `${process.env.BASE_URL}${process.env.PORT}/verify-email?token=${token}`;
       const text =
@@ -128,7 +135,7 @@ const verifyEmail = async (req, res) => {
   }
 
   try {
-    const { email, name, password } = jwt.verify(
+    const { email, name, hashedPassword } = jwt.verify(
       token,
       process.env.JWT_SECRET,
       (err, decoded) => {
@@ -155,7 +162,7 @@ const verifyEmail = async (req, res) => {
     const user = {
       email,
       name,
-      password,
+      password : hashedPassword,
       phoneNumber,
       idAvatar,
       createdAt,
@@ -318,6 +325,7 @@ const resetPassword = async (req, res) => {
 // delete account hanlder
 const deleteAccount = async (req, res) => {
   const user = req.user;
+  const password = req.query.password;
   if (!user.email) {
     res.status(400).json({
       status: "fail",
@@ -335,9 +343,17 @@ const deleteAccount = async (req, res) => {
         message: "account is not available",
       });
     }
-    const token = generateToken(user.id)
-    const verificationUrl = `${process.env.BASE_URL}${process.env.PORT}/delete?token=${token}`;
-    emailValidation.sendVerificationEmail();
+    if(userTarget.password === password){
+        res.status(400).json({
+            status: "fail",
+            message: "password is not valid"
+        })
+    }
+    store.deleteUser("users", userTarget.id);
+    return res.status(201).json({
+        status: "success",
+        message: "account was deleted"
+    })
   } catch (error) {
     console.error(error);
     return null;

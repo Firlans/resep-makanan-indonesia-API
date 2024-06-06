@@ -15,11 +15,13 @@ const {
 } = require("../controllers/userController");
 const authorization = require("../services/auth");
 
+// router variable
 const router = express.Router();
 
+// route
 router.get("/login", login);
 router.post("/register", register);
-router.get("/verify-email", verifyEmail);
+router.get("/verify-email", verifyEmail); // via email
 router.get("/profile", authorization, getProfile);
 router.post("/forget-password", forgetPassword);
 router.post(
@@ -28,7 +30,7 @@ router.post(
   upload.single("avatar"),
   editProfile
 );
-router.get("/reset-password", resetPassword);
+router.get("/reset-password", resetPassword); // via email
 router.delete("/:user/delete", deleteAccount);
 
 module.exports = router;

@@ -49,4 +49,15 @@ const getUsers = async () => {
   }
 };
 
-module.exports = { addUser, getUsers, updateUser };
+const deleteUser = async (collectionName, documentId) => {
+  try {
+    const docRef = firestore.collection(collectionName).doc(documentId);
+    await docRef.delete();
+    console.log(`Document ${documentId} successfully deleted.`);
+  } catch (error) {
+    console.error('Error deleting document: ', error);
+  }
+}
+
+
+module.exports = { addUser, getUsers, updateUser, deleteUser };
