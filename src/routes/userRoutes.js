@@ -31,6 +31,6 @@ router.post(
   editProfile
 );
 router.get("/reset-password", resetPassword); // via email
-router.delete("/:user/delete", deleteAccount);
+router.delete("/:user/delete", authorization, deleteAccount);
 
 module.exports = router;
