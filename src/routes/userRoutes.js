@@ -1,6 +1,7 @@
-"use strict";
+"use strict"
 
 const express = require("express");
+const multer = require('multer');
 
 const { upload } = require("../services/upload");
 const {
@@ -13,9 +14,28 @@ const {
   resetPassword,
   deleteAccount
 } = require("../controllers/userController");
+const {
+    getIngredientsDetails,
+    getDashboard,
+    getRecipeDetails,
+    createIngredient,
+    getAllIngredients,
+    createRecipe,
+    getAllRecipes,
+    updateIngredientData,
+    deleteIngredient,
+    deleteAllIngredientsData,
+    updateRecipeData,
+    deleteRecipe,
+    deleteAllRecipesData
+} = require('../controllers/appController');
 const authorization = require("../services/auth");
+const { getIngredients } = require("../services/storeData");
 
-// router variable
+// konfigurasi multer
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
+
 const router = express.Router();
 
 // route
@@ -33,4 +53,25 @@ router.post(
 router.get("/reset-password", resetPassword); // via email
 router.delete("/:user/delete", authorization, deleteAccount);
 
+// routes for ingredients
+router.get('/ingredients', getAllIngredients);
+router.get('/ingredient/:id', getIngredientsDetails);
+router.post('/ingredient-detail-post', upload.single('image'), createIngredient); // Middleware multer untuk single image upload
+router.put('/ingredient-update/:id', upload.single('image'), updateIngredientData);
+router.delete('/ingredient-delete/:id', deleteIngredient);
+router.delete('/ingredient-deleteAll', deleteAllIngredientsData);
+
+// mengambil data dashboard
+router.get('/dashboard', getDashboard);
+
+// routes for recipe
+router.post('/recipe-post', createRecipe);
+router.get('/recipe-detail/:id', getRecipeDetails);
+router.get('/all-recipes', getAllRecipes);
+router.put('/recipe-update/:id', updateRecipeData);
+router.delete('/recipe-deleteId/:id', deleteRecipe);
+router.delete('/recipe-delete', deleteAllRecipesData);
+
 module.exports = router;
+
+
