@@ -358,6 +358,7 @@ const deleteAccount = async (req, res) => {
     console.error(error);
     return null;
   }
+
 };
 
 module.exports = {
