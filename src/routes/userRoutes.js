@@ -3,7 +3,7 @@
 const express = require("express");
 const multer = require('multer');
 
-const { upload } = require("../services/upload");
+const avatarStore = require("../services/upload");
 const {
   register,
   login,
@@ -47,7 +47,7 @@ router.post("/forget-password", forgetPassword);
 router.post(
   "/profile/edit",
   authorization,
-  upload.single("avatar"),
+  avatarStore.upload.single("avatar"),
   editProfile
 );
 router.get("/reset-password", resetPassword); // via email
