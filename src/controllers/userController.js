@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 const path = require("path")
 const bcrypt = require('bcrypt');
 
-const { uploadToGCS } = require("../services/upload");
+const { uploadToGCS, deleteFile } = require("../services/storage");
 const emailValidation = require("../services/emailValidation");
 const store = require("../services/storeData");
 const generateToken = require("../services/generateToken");
@@ -349,6 +349,7 @@ const deleteAccount = async (req, res) => {
             message: "password is not valid"
         })
     }
+    deleteFile(userTarget.id, process.env.AVATAR_BUCKET);
     store.deleteUser("users", userTarget.id);
     return res.status(201).json({
         status: "success",
