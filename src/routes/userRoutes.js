@@ -17,9 +17,11 @@ const {
     deleteAllIngredientsData,
     updateRecipeData,
     deleteRecipe,
-    deleteAllRecipesData
+    deleteAllRecipesData,
+    getRecipesByIngredient,
+    getIngredientsByName,
+    getRecipesByName
 } = require('../controllers/appController');
-const { getIngredients } = require("../services/storeData");
 
 // konfigurasi multer
 const storage = multer.memoryStorage();
@@ -46,6 +48,13 @@ router.get('/all-recipes', getAllRecipes);
 router.put('/recipe-update/:id', updateRecipeData);
 router.delete('/recipe-deleteId/:id', deleteRecipe);
 router.delete('/recipe-delete', deleteAllRecipesData);
+
+// route search / get recipes and ingredients by name
+router.get('/recipes/name', getRecipesByName);
+router.get('/ingredients/name', getIngredientsByName);
+
+// routes for getting ingredients by name and recipes by ingredients
+router.get('/recipes/by-ingredient', getRecipesByIngredient);
 
 module.exports = router;
 

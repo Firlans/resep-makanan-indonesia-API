@@ -1,9 +1,10 @@
-const {Firestore} = require('@google-cloud/firestore');
+const { Firestore } = require('@google-cloud/firestore');
+require('dotenv').config();
 
-// Create a new client
+// create new client
 const firestore = new Firestore({
-  projectId: 'recipes-api-424908',
-  keyFilename: "recipes-api-424908-aedd4aa9c744.json",
+  projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
+  keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
 });
 
 module.exports = firestore;

@@ -1,9 +1,10 @@
 // src/services/storeData.js
 const db = require('./db.js');
 const { Storage } = require('@google-cloud/storage');
+
 const storage = new Storage({
-    projectId: 'recipes-api-424908',
-    keyFilename: 'recipes-api-424908-aedd4aa9c744.json',
+    projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
+    keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
 });
 
 // konfigurasi nama bucket
@@ -11,9 +12,9 @@ const bucketName = 'ingredient-details-recipes-api';
 const bucket = storage.bucket(bucketName);
 
 // fungsi untuk mengunggah gambar ke Cloud Storage
-const uploadImage = async (file) => {
-    const { originalname, buffer} = file;
-    const blob = bucket.file(originalname);
+const uploadImage = async (file, idPicture) => {
+    const { buffer } = file;
+    const blob = bucket.file(idPicture);
     const blobStream = blob.createWriteStream({
         resumable: false
     });
@@ -24,8 +25,8 @@ const uploadImage = async (file) => {
         blobStream.end(buffer);
     });
 
-    return `https://storage.googleapis.com/${bucketName}/${originalname}`;
-}
+    return `https://storage.googleapis.com/${bucketName}/${idPicture}`;
+};
 
 // get all ingredients
 const getIngredients = async () => {
@@ -61,7 +62,7 @@ const getRecipeById = async (id) => {
 
 //menambahkan bahan
 const addIngredient = async (ingredient, file) => {
-    const imageUrl = await uploadImage(file);
+    const imageUrl = await uploadImage(file, ingredient.id_picture);
     const docRef = await db.collection('ingredients').add({
         ...ingredient,
         id_picture: imageUrl
@@ -125,6 +126,85 @@ const deleteAllRecipes = async () => {
     await batch.commit();
 };
 
+// fungsi mendapatkan bahan berdasarkan nama
+const searchIngredientsByName = async (name) => {
+    const ingredientsRef = db.collection('ingredients');
+    const snapshot = await ingredientsRef.where('name', '==', name).get();
+
+    if (snapshot.empty) {
+        console.log('No matching documents.');
+        return [];
+    }
+
+    let ingredients = [];
+    snapshot.forEach(doc => {
+        ingredients.push({ id: doc.id, ...doc.data() });
+    });
+
+    return ingredients;
+};
+
+// fungsi mendapatkan resep berdasarkan bahan
+const searchRecipesByIngredient = async (ingredient) => {
+    console.log(`Mencari resep dengan bahan: ${ingredient}`);
+    const normalizedIngredient = ingredient.trim().toLowerCase();
+    const recipesRef = db.collection('recipes');
+    const snapshot = await recipesRef.get();
+
+    if (snapshot.empty) {
+        console.log('Tidak ada dokumen yang cocok.');
+        return [];
+    }
+
+    let recipes = [];
+    snapshot.forEach(doc => {
+        const data = doc.data();
+        console.log(`Memeriksa resep: ${data.name}`);
+        if (data.bahanBahanArray) {
+            const normalizedIngredientsArray = data.bahanBahanArray.map(item => item.replace(/["']/g, "").trim().toLowerCase());
+            if (normalizedIngredientsArray.some(item => item.includes(normalizedIngredient))) {
+                console.log(`Menambahkan resep: ${data.name}`);
+                recipes.push({ id: doc.id, ...data });
+            } else {
+                console.log(`Bahan ${normalizedIngredient} tidak ditemukan dalam resep: ${data.name}`);
+            }
+        }
+    });
+
+    if (recipes.length === 0) {
+        console.log('Tidak ada dokumen yang cocok.');
+    }
+
+    return recipes;
+};
+
+// fungsi search resep dengan nama
+const searchRecipesByName = async (name) => {
+    const normalizedRecipeName = name.trim().toLowerCase(); // Normalisasi input
+    const recipesRef = db.collection('recipes');
+    const snapshot = await recipesRef.get();
+
+    if (snapshot.empty) {
+        console.log('No matching documents.');
+        return [];
+    }
+
+    let recipes = [];
+    snapshot.forEach(doc => {
+        const data = doc.data();
+        const normalizedDataName = data.name.trim().toLowerCase(); // Normalisasi data dari database
+        if (normalizedDataName === normalizedRecipeName) {
+            recipes.push({ id: doc.id, ...data });
+        }
+    });
+
+    if (recipes.length === 0) {
+        console.log('No matching documents.');
+    }
+
+    return recipes;
+};
+
 module.exports = {
     getIngredients,
     getIngredientById,
@@ -137,5 +217,8 @@ module.exports = {
     deleteIngredientById,
     deleteAllIngredients,
     deleteRecipeById,
-    deleteAllRecipes
+    deleteAllRecipes,
+    searchIngredientsByName,
+    searchRecipesByIngredient,
+    searchRecipesByName
 };
