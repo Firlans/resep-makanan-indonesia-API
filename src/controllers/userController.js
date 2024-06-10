@@ -102,9 +102,10 @@ const register = async (req, res) => {
         message: "email already exists",
       });
     }
+    
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
-    console.log(hashedPassword);
+
     emailValidation.checkDomain(email, async (isValidDomain) => {
       if (!isValidDomain) {
         return res.status(400).json({ error: "Invalid email domain." });
@@ -300,6 +301,11 @@ const resetPassword = async (req, res) => {
         return decoded;
       }
     );
+
+
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
     const users = await store.getUsers();
     const userAccount = users.find((userData) => userData.email === email);
     if (!userAccount) {
@@ -309,7 +315,7 @@ const resetPassword = async (req, res) => {
       });
     }
 
-    userAccount.password = newPassword;
+    userAccount.password = hashedPassword;
 
     await store.updateUser(userAccount.id, userAccount);
 

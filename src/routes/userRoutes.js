@@ -2,7 +2,7 @@
 
 const express = require("express");
 
-const { upload } = require("../services/upload");
+const { upload } = require("../services/storage");
 const {
   register,
   login,
@@ -19,7 +19,7 @@ const authorization = require("../services/auth");
 const router = express.Router();
 
 // route
-router.get("/login", login);
+router.post("/login", login);
 router.post("/register", register);
 router.get("/verify-email", verifyEmail); // via email
 router.get("/profile", authorization, getProfile);
@@ -31,6 +31,6 @@ router.post(
   editProfile
 );
 router.get("/reset-password", resetPassword); // via email
-router.delete("/:user/delete", authorization, deleteAccount);
+router.delete("user/delete-account", authorization, deleteAccount);
 
 module.exports = router;
