@@ -44,4 +44,13 @@ const uploadToGCS = (file, fileName, bucketName) => {
   });
 };
 
+const deleteFile = async (fileName, bucketName) => {
+  try {
+    const filePatch = `https://storage.googleapis.com/${bucketName}/${fileName}`;
+    await storage.bucket(bucketName).file(filePatch).delete();
+  } catch (error) {
+    console.error(error);
+  }
+}
+
 module.exports = { upload, uploadToGCS };

@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 const path = require("path")
 const bcrypt = require('bcrypt');
 
-const { uploadToGCS } = require("../services/upload");
+const { uploadToGCS, deleteFile } = require("../services/storage");
 const emailValidation = require("../services/emailValidation");
 const store = require("../services/storeData");
 const generateToken = require("../services/generateToken");
@@ -102,9 +102,10 @@ const register = async (req, res) => {
         message: "email already exists",
       });
     }
+    
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
-    console.log(hashedPassword);
+
     emailValidation.checkDomain(email, async (isValidDomain) => {
       if (!isValidDomain) {
         return res.status(400).json({ error: "Invalid email domain." });
@@ -300,6 +301,11 @@ const resetPassword = async (req, res) => {
         return decoded;
       }
     );
+
+
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
     const users = await store.getUsers();
     const userAccount = users.find((userData) => userData.email === email);
     if (!userAccount) {
@@ -309,7 +315,7 @@ const resetPassword = async (req, res) => {
       });
     }
 
-    userAccount.password = newPassword;
+    userAccount.password = hashedPassword;
 
     await store.updateUser(userAccount.id, userAccount);
 
@@ -349,6 +355,7 @@ const deleteAccount = async (req, res) => {
             message: "password is not valid"
         })
     }
+    deleteFile(userTarget.id, process.env.AVATAR_BUCKET);
     store.deleteUser("users", userTarget.id);
     return res.status(201).json({
         status: "success",
