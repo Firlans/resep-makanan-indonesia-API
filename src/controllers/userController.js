@@ -102,7 +102,7 @@ const register = async (req, res) => {
         message: "email already exists",
       });
     }
-    
+
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
@@ -163,7 +163,7 @@ const verifyEmail = async (req, res) => {
     const user = {
       email,
       name,
-      password : hashedPassword,
+      password: hashedPassword,
       phoneNumber,
       idAvatar,
       createdAt,
@@ -241,7 +241,7 @@ const editProfile = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const idAvatar = file? `avatar-${user.id}${path.extname(file.originalname)}` : "avatar-0";
+    const idAvatar = file ? `avatar-${user.id}${path.extname(file.originalname)}` : "avatar-0";
     userData.name = edited.name;
     userData.phoneNumber = edited.phoneNumber;
     userData.idAvatar = idAvatar;
@@ -349,17 +349,20 @@ const deleteAccount = async (req, res) => {
         message: "account is not available",
       });
     }
-    if(userTarget.password === password){
-        res.status(400).json({
-            status: "fail",
-            message: "password is not valid"
-        })
+
+    const match = await bcrypt.compare(password, userTarget.password);
+    
+    if (!match) {
+      return res.status(400).json({
+        status: "fail",
+        message: "password is not valid"
+      })
     }
-    deleteFile(userTarget.id, process.env.AVATAR_BUCKET);
-    store.deleteUser("users", userTarget.id);
+    await deleteFile(userTarget.idAvatar, process.env.AVATAR_BUCKET);
+    await store.deleteUser("users", userTarget.id);
     return res.status(201).json({
-        status: "success",
-        message: "account was deleted"
+      status: "success",
+      message: "account was deleted"
     })
   } catch (error) {
     console.error(error);

@@ -3,7 +3,7 @@
 const express = require("express");
 const multer = require('multer');
 
-const { upload } = require("../services/storage");
+const avatarStore = require("../services/storage");
 const {
   register,
   login,
@@ -51,7 +51,7 @@ router.post(
   editProfile
 );
 router.get("/reset-password", resetPassword); // via email
-router.delete("user/delete-account", authorization, deleteAccount);
+router.delete("/delete-account", authorization, deleteAccount);
 
 module.exports = router;
 

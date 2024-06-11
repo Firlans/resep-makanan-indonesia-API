@@ -46,10 +46,12 @@ const uploadToGCS = (file, fileName, bucketName) => {
 
 const deleteFile = async (fileName, bucketName) => {
   try {
+    if(fileName === "avatar-0") return
     const filePatch = `https://storage.googleapis.com/${bucketName}/${fileName}`;
     await storage.bucket(bucketName).file(filePatch).delete();
   } catch (error) {
     console.error(error);
+    throw new Error("Failed to delete file");
   }
 }
 
