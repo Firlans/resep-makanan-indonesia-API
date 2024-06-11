@@ -1,6 +1,7 @@
 // src/services/storeData.js
 const db = require('./db.js');
 const { Storage } = require('@google-cloud/storage');
+const mime = require('mime-types');
 
 const storage = new Storage({
     projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
@@ -11,16 +12,21 @@ const storage = new Storage({
 const bucketName = 'ingredient-details-recipes-api';
 const bucket = storage.bucket(bucketName);
 
-// fungsi untuk mengunggah gambar ke Cloud Storage
 const uploadImage = async (file, filename) => {
     if (!file || !filename) {
         throw new Error('A file and a file name must be specified.');
     }
 
-    const bucket = storage.bucket(bucketName);
+    const fileExists = await bucket.file(filename).exists();
+    if (fileExists[0]) {
+        throw new Error(`File with ID ${filename} already exists.`);
+    }
+
     const blob = bucket.file(filename);
+    const contentType = mime.lookup(file.originalname) || 'application/octet-stream';
     const blobStream = blob.createWriteStream({
         resumable: false,
+        contentType: contentType,  // Set the content type here
     });
 
     return new Promise((resolve, reject) => {
@@ -70,8 +76,8 @@ const addIngredient = async (ingredient, file) => {
     const imageUrl = await uploadImage(file, ingredient.id_picture);
     const docRef = await db.collection('ingredients').add({
         ...ingredient,
-        normalized_name: ingredient.name.trim().toLowerCase(),
-        id_picture: imageUrl
+        id_picture: imageUrl,
+        normalized_name: ingredient.name.trim().toLowerCase()
     });
     const newIngredient = await docRef.get();
     return { id: newIngredient.id, ...newIngredient.data() };
