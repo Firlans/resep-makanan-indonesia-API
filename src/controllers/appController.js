@@ -12,7 +12,8 @@ const {
     deleteRecipeById, 
     deleteAllRecipes,
     searchIngredientsByName,
-    searchRecipesByIngredient
+    searchRecipesByIngredient,
+    searchRecipesByName
 } = require('../services/storeData');
 const multer = require('multer');
 const upload = multer();
@@ -199,10 +200,6 @@ const createIngredient = async (req, res) => {
         const { name, benefit, id_picture } = req.query;
         const file = req.file;
 
-        // Log request query dan file
-        console.log("Request Query:", req.query);
-        console.log("Uploaded File:", file);
-
         // Verifikasi parameter yang diperlukan dan file
         if (!name || !benefit || !file) {
             return res.status(400).json({
@@ -244,15 +241,21 @@ const createIngredient = async (req, res) => {
 const updateIngredientData = async (req, res) => {
     try {
         const { id } = req.params;
-        const updatedData = req.body;
+        const updatedData = req.query;
+        const file = req.file;
 
-        const updatedIngredient = await updateIngredient(id, updatedData, req.file);
+        // Log id dan file yang diunggah
+        console.log("Ingredient ID:", id);
+        console.log("Uploaded File:", file);
+
+        const updatedIngredient = await updateIngredient(id, updatedData, file);
         res.json({
             status: 'success',
             message: 'Bahan berhasil diperbarui',
             data: updatedIngredient
         });
     } catch (error) {
+        console.error("Error in updateIngredientData:", error);
         res.status(500).json({
             status: 'error',
             message: 'Server sedang bermasalah',
@@ -346,7 +349,11 @@ const createRecipe = async (req, res) => {
 const updateRecipeData = async (req, res) => {
     try {
         const { id } = req.params;
-        const updatedData = req.body;
+        const updatedData = req.query;
+
+        // Log the received data for debugging
+        console.log("Recipe ID:", id);
+        console.log("Updated Data:", updatedData);
 
         const updatedRecipe = await updateRecipe(id, updatedData);
         res.json({
@@ -410,28 +417,8 @@ const getRecipesByName = async (req, res) => {
     }
   
     try {
-      const recipesRef = db.collection('resep');
-      const snapshot = await recipesRef.get();
-  
-      if (snapshot.empty) {
-        console.log("No recipes found in the database.");
-        return res.status(404).json({
-          status: "fail",
-          message: "No recipes found",
-        });
-      }
-  
-      const recipes = [];
-      const lowerCaseName = name.toLowerCase();
-  
-      snapshot.forEach(doc => {
-        const recipe = doc.data();
-        console.log(`Checking recipe: ${recipe.name.toLowerCase()} against ${lowerCaseName}`);
-        if (recipe.name.toLowerCase() === lowerCaseName) {
-          recipes.push({ id: doc.id, ...recipe });
-        }
-      });
-  
+      const recipes = await searchRecipesByName(name);
+
       if (recipes.length === 0) {
         console.log("No matching documents found.");
         return res.status(404).json({
@@ -439,8 +426,6 @@ const getRecipesByName = async (req, res) => {
           message: "Bahan tidak ditemukan",
         });
       }
-  
-      console.log("Matching recipes found: ", recipes);
   
       return res.status(200).json({
         status: "success",
@@ -454,7 +439,7 @@ const getRecipesByName = async (req, res) => {
         message: "An error occurred while retrieving recipes",
       });
     }
-  };    
+};
 
 module.exports = {
     getAllIngredients,

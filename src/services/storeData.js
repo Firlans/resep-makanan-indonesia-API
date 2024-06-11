@@ -12,20 +12,25 @@ const bucketName = 'ingredient-details-recipes-api';
 const bucket = storage.bucket(bucketName);
 
 // fungsi untuk mengunggah gambar ke Cloud Storage
-const uploadImage = async (file, idPicture) => {
-    const { buffer } = file;
-    const blob = bucket.file(idPicture);
+const uploadImage = async (file, filename) => {
+    if (!file || !filename) {
+        throw new Error('A file and a file name must be specified.');
+    }
+
+    const bucket = storage.bucket(bucketName);
+    const blob = bucket.file(filename);
     const blobStream = blob.createWriteStream({
-        resumable: false
+        resumable: false,
     });
 
-    await new Promise((resolve, reject) => {
-        blobStream.on('finish', resolve);
-        blobStream.on('error', reject);
-        blobStream.end(buffer);
+    return new Promise((resolve, reject) => {
+        blobStream.on('finish', () => {
+            const publicUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
+            resolve(publicUrl);
+        }).on('error', (err) => {
+            reject(err);
+        }).end(file.buffer);
     });
-
-    return `https://storage.googleapis.com/${bucketName}/${idPicture}`;
 };
 
 // get all ingredients
@@ -65,6 +70,7 @@ const addIngredient = async (ingredient, file) => {
     const imageUrl = await uploadImage(file, ingredient.id_picture);
     const docRef = await db.collection('ingredients').add({
         ...ingredient,
+        normalized_name: ingredient.name.trim().toLowerCase(),
         id_picture: imageUrl
     });
     const newIngredient = await docRef.get();
@@ -78,10 +84,10 @@ const addRecipe = async (recipe) => {
     return { id: newRecipe.id, ...newRecipe.data() };
 };
 
-// mengupdate bahan
+/// Mengupdate bahan
 const updateIngredient = async (id, updateData, file) => {
     if (file) {
-        const imageUrl = await uploadImage(file);
+        const imageUrl = await uploadImage(file, updateData.id_picture || file.originalname);
         updateData.id_picture = imageUrl;
     }
     await db.collection('ingredients').doc(id.toString()).update(updateData);
@@ -127,9 +133,11 @@ const deleteAllRecipes = async () => {
 };
 
 // fungsi mendapatkan bahan berdasarkan nama
+// fungsi search bahan berdasarkan nama
 const searchIngredientsByName = async (name) => {
+    const normalizedIngredientName = name.trim().toLowerCase().replace(/\s+/g, ''); // Normalisasi input dengan menghapus spasi
     const ingredientsRef = db.collection('ingredients');
-    const snapshot = await ingredientsRef.where('name', '==', name).get();
+    const snapshot = await ingredientsRef.get();
 
     if (snapshot.empty) {
         console.log('No matching documents.');
@@ -138,8 +146,16 @@ const searchIngredientsByName = async (name) => {
 
     let ingredients = [];
     snapshot.forEach(doc => {
-        ingredients.push({ id: doc.id, ...doc.data() });
+        const data = doc.data();
+        const normalizedDataName = data.name.trim().toLowerCase().replace(/\s+/g, ''); // Normalisasi data dari database dengan menghapus spasi
+        if (normalizedDataName.includes(normalizedIngredientName)) {
+            ingredients.push({ id: doc.id, ...data });
+        }
     });
+
+    if (ingredients.length === 0) {
+        console.log('No matching documents.');
+    }
 
     return ingredients;
 };
@@ -180,7 +196,7 @@ const searchRecipesByIngredient = async (ingredient) => {
 
 // fungsi search resep dengan nama
 const searchRecipesByName = async (name) => {
-    const normalizedRecipeName = name.trim().toLowerCase(); // Normalisasi input
+    const normalizedRecipeName = name.trim().toLowerCase().replace(/\s+/g, ''); // Normalisasi input dengan menghapus spasi
     const recipesRef = db.collection('recipes');
     const snapshot = await recipesRef.get();
 
@@ -192,8 +208,8 @@ const searchRecipesByName = async (name) => {
     let recipes = [];
     snapshot.forEach(doc => {
         const data = doc.data();
-        const normalizedDataName = data.name.trim().toLowerCase(); // Normalisasi data dari database
-        if (normalizedDataName === normalizedRecipeName) {
+        const normalizedDataName = data.name.trim().toLowerCase().replace(/\s+/g, ''); // Normalisasi data dari database dengan menghapus spasi
+        if (normalizedDataName.includes(normalizedRecipeName)) {
             recipes.push({ id: doc.id, ...data });
         }
     });
