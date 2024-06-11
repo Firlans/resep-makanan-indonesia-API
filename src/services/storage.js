@@ -53,4 +53,4 @@ const deleteFile = async (fileName, bucketName) => {
   }
 }
 
-module.exports = { upload, uploadToGCS };
+module.exports = { upload, uploadToGCS, deleteFile };
