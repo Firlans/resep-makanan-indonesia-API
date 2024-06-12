@@ -24,8 +24,13 @@ const upload = multer({
 // Fungsi untuk mengunggah file ke Google Cloud Storage
 const uploadToGCS = (file, fileName, bucketName) => {
   const bucket = storage.bucket(bucketName);
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     const blob = bucket.file(fileName);
+    const [exists] = await blob.exists();
+    if (exists) {
+        // Hapus file jika ada
+        await blob.delete();
+    }
     const blobStream = blob.createWriteStream({
       resumable: false,
       gzip: true,
@@ -46,11 +51,14 @@ const uploadToGCS = (file, fileName, bucketName) => {
 
 const deleteFile = async (fileName, bucketName) => {
   try {
-    const filePatch = `https://storage.googleapis.com/${bucketName}/${fileName}`;
-    await storage.bucket(bucketName).file(filePatch).delete();
+    if(fileName === "avatar-0") return
+    const bucket = storage.bucket(bucketName);
+    const blob = bucket.file(fileName);
+    await blob.delete();
   } catch (error) {
     console.error(error);
+    throw new Error("Failed to delete file");
   }
 }
 
-module.exports = { upload, uploadToGCS };
+module.exports = { upload, uploadToGCS, deleteFile };
