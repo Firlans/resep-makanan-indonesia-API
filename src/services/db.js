@@ -3,8 +3,8 @@ require('dotenv').config();
 
 // create new client
 const firestore = new Firestore({
-  projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
-  keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+  projectId: process.env.ID_PROJECT,
+  keyFilename: process.env.SERVICE_ACCOUNT,
 });
 
 module.exports = firestore;

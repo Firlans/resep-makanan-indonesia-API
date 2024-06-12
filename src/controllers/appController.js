@@ -1,15 +1,15 @@
-const { 
-    getIngredients, 
-    getIngredientById, 
-    getRecipes, 
-    getRecipeById, 
-    addIngredient, 
+const {
+    getIngredients,
+    getIngredientById,
+    getRecipes,
+    getRecipeById,
+    addIngredient,
     addRecipe,
-    updateIngredient, 
-    updateRecipe, 
-    deleteIngredientById, 
-    deleteAllIngredients, 
-    deleteRecipeById, 
+    updateIngredient,
+    updateRecipe,
+    deleteIngredientById,
+    deleteAllIngredients,
+    deleteRecipeById,
     deleteAllRecipes,
     searchIngredientsByName,
     searchRecipesByIngredient,
@@ -41,7 +41,7 @@ const getAllRecipes = async (req, res) => {
     try {
         const recipes = await getRecipes();
         res.json({
-            status:'success',
+            status: 'success',
             message: 'semua resep berhasil didapatkan',
             data: recipes
         });
@@ -57,26 +57,26 @@ const getAllRecipes = async (req, res) => {
 // mengambil data bahan berdasarkan id
 const getIngredientsDetails = async (req, res) => {
     try {
-      const { id } = req.params;
-      const ingredient = await getIngredientById(id);
-  
-      if (!ingredient) {
-        return res.status(404).json({
-          status: 'fail',
-          message: 'Bahan tidak ditemukan',
+        const { id } = req.params;
+        const ingredient = await getIngredientById(id);
+
+        if (!ingredient) {
+            return res.status(404).json({
+                status: 'fail',
+                message: 'Bahan tidak ditemukan',
+            });
+        }
+
+        res.json({
+            status: 'success',
+            data: ingredient,
         });
-      }
-  
-      res.json({
-        status: 'success',
-        data: ingredient,
-      });
     } catch (error) {
-      res.status(500).json({
-        status: 'error',
-        message: 'Server sedang bermasalah',
-        error: error.message,
-      });
+        res.status(500).json({
+            status: 'error',
+            message: 'Server sedang bermasalah',
+            error: error.message,
+        });
     }
 };
 
@@ -197,15 +197,27 @@ const getDashboard = async (req, res) => {
 // menambahkan bahan
 const createIngredient = async (req, res) => {
     try {
-        const { name, benefit, id_picture } = req.query;
+        const { name, benefit } = req.query;
         const file = req.file;
 
         // Verifikasi parameter yang diperlukan dan file
-        if (!name || !benefit || !file) {
+        if (!name || !benefit) {
             return res.status(400).json({
                 status: 'fail',
                 message: 'Silakan isi nama bahan, benefit, dan gambar bahan'
             });
+        }
+
+        // verifikasi data duplicat
+        const ingredients = await getIngredients();
+        console.log(ingredients);
+        const duplicate = ingredients.find(ingredientData => ingredientData.name === name);
+
+        if (duplicate) {
+            return res.status(409).json({
+                status: "fail",
+                message: `bahan ${name} sudah ada`
+            })
         }
 
         // Proses benefit
@@ -214,15 +226,15 @@ const createIngredient = async (req, res) => {
             .map(line => line.trim())
             .filter(line => line.length > 0);
 
-        const ingredientData = { 
-            name, 
+        const ingredientData = {
+            name,
             benefit: benefitArray,
-            id_picture: id_picture || file.originalname
+            id_picture: file ? `ingredient-${name}` : "ingredient-default"
         };
 
         // Tambahkan bahan
         const newIngredient = await addIngredient(ingredientData, file);
-        res.json({
+        return res.json({
             status: 'success',
             message: 'Bahan berhasil ditambahkan',
             data: newIngredient
@@ -244,9 +256,15 @@ const updateIngredientData = async (req, res) => {
         const updatedData = req.query;
         const file = req.file;
 
-        // Log id dan file yang diunggah
-        console.log("Ingredient ID:", id);
-        console.log("Uploaded File:", file);
+        // mencari data dengan id
+        const ingredients = await getIngredients()
+        const availableIngredient = ingredients.find(ingredientData => ingredientData.id === id)
+        if (!availableIngredient) {
+            return res.status(404).json({
+                status: "fail",
+                message: `${id} tidak dapat ditemukan`
+            })
+        }
 
         const updatedIngredient = await updateIngredient(id, updatedData, file);
         res.json({
@@ -268,6 +286,14 @@ const updateIngredientData = async (req, res) => {
 const deleteIngredient = async (req, res) => {
     try {
         const { id } = req.params;
+        const ingredents = await getIngredients();
+        const data = ingredents.find(ingredientData => ingredientData.id === id);
+        if (!data) {
+            return res.status(404).json({
+                status: "fail",
+                message: `ID ${id} tidak ditemukan`
+            })
+        }
         await deleteIngredientById(id);
         res.json({
             status: 'success',
@@ -302,7 +328,7 @@ const deleteAllIngredientsData = async (req, res) => {
 // menambahkan resep
 const createRecipe = async (req, res) => {
     try {
-        const {name, description, bahanBahan, langkahPembuatan, asalDaerah, author} = req.query;
+        const { name, description, bahanBahan, langkahPembuatan, asalDaerah, author } = req.query;
 
         if (!name || !description || !bahanBahan || !langkahPembuatan || !asalDaerah || !author) {
             return res.status(400).json({
@@ -312,20 +338,20 @@ const createRecipe = async (req, res) => {
         }
 
         const bahanBahanArray = bahanBahan
-        .split('\n')
-        .map(line => line.trim())
-        .filter(line => line.length > 0);
+            .split(',')
+            .map(line => line.trim())
+            .filter(line => line.length > 0);
 
         const langkahPembuatanArray = langkahPembuatan
-        .split('\n')
-        .map(line => line.trim())
-        .filter(line => line.length > 0);
+            .split(',')
+            .map(line => line.trim())
+            .filter(line => line.length > 0);
 
         const recipeData = {
             name,
             description,
-            bahanBahanArray,
-            langkahPembuatanArray,
+            bahan: bahanBahanArray,
+            langkah_pembuatan: langkahPembuatanArray,
             asalDaerah,
             author
         };
@@ -351,11 +377,35 @@ const updateRecipeData = async (req, res) => {
         const { id } = req.params;
         const updatedData = req.query;
 
-        // Log the received data for debugging
-        console.log("Recipe ID:", id);
-        console.log("Updated Data:", updatedData);
+        const recipes = await getRecipes();
+        const target = recipes.find(recipeData => recipeData.id === id);
+        if(!target){
+            return res.status(404).json({
+                status: "fail",
+                message: `ID ${id} tidak ditemukan`
+            })
+        }
 
-        const updatedRecipe = await updateRecipe(id, updatedData);
+        const bahanBahanArray = updatedData.bahanBahan
+            .split(',')
+            .map(line => line.trim())
+            .filter(line => line.length > 0);
+
+        const langkahPembuatanArray = updatedData.langkahPembuatan
+            .split(',')
+            .map(line => line.trim())
+            .filter(line => line.length > 0);
+
+        const updatedRecipeData = {
+            name : updatedData.name,
+            description : updatedData.description,
+            bahan: bahanBahanArray,
+            langkah_pembuatan: langkahPembuatanArray,
+            "asal-daerah" : updatedData.asalDaerah,
+            author : updatedData.author
+        };
+
+        const updatedRecipe = await updateRecipe(id, updatedRecipeData);
         res.json({
             status: 'success',
             message: 'Resep berhasil diperbarui',
@@ -374,6 +424,14 @@ const updateRecipeData = async (req, res) => {
 const deleteRecipe = async (req, res) => {
     try {
         const { id } = req.params;
+        const recipes = await getRecipes();
+        const target = recipes.find(ingredientData => ingredientData.id === id   )
+        if(!target){
+            return res.status(404).json({
+                status: "fail",
+                message: `ID ${id} tidak ditemukan`
+            })
+        }
         await deleteRecipeById(id);
         res.json({
             status: 'success',
@@ -408,36 +466,36 @@ const deleteAllRecipesData = async (req, res) => {
 // fungsi mendapatkan resep berdasarkan nama
 const getRecipesByName = async (req, res) => {
     const { name } = req.query;
-  
-    if (!name) {
-      return res.status(400).json({
-        status: "fail",
-        message: "name query parameter is required",
-      });
-    }
-  
-    try {
-      const recipes = await searchRecipesByName(name);
 
-      if (recipes.length === 0) {
-        console.log("No matching documents found.");
-        return res.status(404).json({
-          status: "fail",
-          message: "Bahan tidak ditemukan",
+    if (!name) {
+        return res.status(400).json({
+            status: "fail",
+            message: "name query parameter is required",
         });
-      }
-  
-      return res.status(200).json({
-        status: "success",
-        message: "Recipes retrieved successfully",
-        data: recipes,
-      });
+    }
+
+    try {
+        const recipes = await searchRecipesByName(name);
+
+        if (recipes.length === 0) {
+            console.log("No matching documents found.");
+            return res.status(404).json({
+                status: "fail",
+                message: "Bahan tidak ditemukan",
+            });
+        }
+
+        return res.status(200).json({
+            status: "success",
+            message: "Recipes retrieved successfully",
+            data: recipes,
+        });
     } catch (error) {
-      console.error("Error getting recipes by name: ", error);
-      return res.status(500).json({
-        status: "error",
-        message: "An error occurred while retrieving recipes",
-      });
+        console.error("Error getting recipes by name: ", error);
+        return res.status(500).json({
+            status: "error",
+            message: "An error occurred while retrieving recipes",
+        });
     }
 };
 

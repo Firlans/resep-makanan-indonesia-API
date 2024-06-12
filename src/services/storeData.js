@@ -4,8 +4,8 @@ const { Storage } = require('@google-cloud/storage');
 const mime = require('mime-types');
 
 const storage = new Storage({
-    projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
-    keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+    projectId: process.env.ID_PROJECT,
+    keyFilename: process.env.SERVICE_ACCOUNT,
 });
 
 // konfigurasi nama bucket
@@ -17,12 +17,15 @@ const uploadImage = async (file, filename) => {
         throw new Error('A file and a file name must be specified.');
     }
 
-    const fileExists = await bucket.file(filename).exists();
-    if (fileExists[0]) {
-        throw new Error(`File with ID ${filename} already exists.`);
+
+    // duplikasi gambar
+    const blob = bucket.file(filename);
+    const [exists] = await blob.exists();
+    if (exists) {
+        // Hapus file jika ada
+        await blob.delete();
     }
 
-    const blob = bucket.file(filename);
     const contentType = mime.lookup(file.originalname) || 'application/octet-stream';
     const blobStream = blob.createWriteStream({
         resumable: false,
@@ -93,7 +96,8 @@ const addRecipe = async (recipe) => {
 /// Mengupdate bahan
 const updateIngredient = async (id, updateData, file) => {
     if (file) {
-        const imageUrl = await uploadImage(file, updateData.id_picture || file.originalname);
+        const name = updateData.name.toLowerCase();
+        const imageUrl = await uploadImage(file, `ingredent-${name}`);
         updateData.id_picture = imageUrl;
     }
     await db.collection('ingredients').doc(id.toString()).update(updateData);
@@ -110,7 +114,12 @@ const updateRecipe = async (id, updatedData) => {
 
 // menghapus bahan by id
 const deleteIngredientById = async (id) => {
-    await db.collection('ingredients').doc(id.toString()).delete();
+    try {
+        await db.collection('ingredients').doc(id.toString()).delete();
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
 };
 
 // menghapus semua bahan
@@ -168,7 +177,6 @@ const searchIngredientsByName = async (name) => {
 
 // fungsi mendapatkan resep berdasarkan bahan
 const searchRecipesByIngredient = async (ingredient) => {
-    console.log(`Mencari resep dengan bahan: ${ingredient}`);
     const normalizedIngredient = ingredient.trim().toLowerCase();
     const recipesRef = db.collection('recipes');
     const snapshot = await recipesRef.get();
@@ -181,11 +189,9 @@ const searchRecipesByIngredient = async (ingredient) => {
     let recipes = [];
     snapshot.forEach(doc => {
         const data = doc.data();
-        console.log(`Memeriksa resep: ${data.name}`);
-        if (data.bahanBahanArray) {
-            const normalizedIngredientsArray = data.bahanBahanArray.map(item => item.replace(/["']/g, "").trim().toLowerCase());
+        if (data.bahan) {
+            const normalizedIngredientsArray = data.bahan.map(item => item.replace(/["']/g, "").toLowerCase());
             if (normalizedIngredientsArray.some(item => item.includes(normalizedIngredient))) {
-                console.log(`Menambahkan resep: ${data.name}`);
                 recipes.push({ id: doc.id, ...data });
             } else {
                 console.log(`Bahan ${normalizedIngredient} tidak ditemukan dalam resep: ${data.name}`);
