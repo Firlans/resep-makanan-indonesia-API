@@ -201,7 +201,7 @@ const createIngredient = async (req, res) => {
         const file = req.file;
 
         // Verifikasi parameter yang diperlukan dan file
-        if (!name || !benefit) {
+        if (!name || !benefit || !file) {
             return res.status(400).json({
                 status: 'fail',
                 message: 'Silakan isi nama bahan, benefit, dan gambar bahan'
@@ -210,7 +210,6 @@ const createIngredient = async (req, res) => {
 
         // verifikasi data duplicat
         const ingredients = await getIngredients();
-        console.log(ingredients);
         const duplicate = ingredients.find(ingredientData => ingredientData.name === name);
 
         if (duplicate) {
@@ -329,14 +328,15 @@ const deleteAllIngredientsData = async (req, res) => {
 const createRecipe = async (req, res) => {
     try {
         const { name, description, bahanBahan, langkahPembuatan, asalDaerah, author } = req.query;
+        const file = req.file;
 
-        if (!name || !description || !bahanBahan || !langkahPembuatan || !asalDaerah || !author) {
+        if (!name || !author) {
             return res.status(400).json({
                 status: 'fail',
-                message: 'silahkan isi nama, deskripsi makanan, bahan-bahan yang diperlukan, langkah pembuatan, asal dearah, serta author'
+                message: 'silahkan isi nama dan author'
             });
         }
-
+        
         const bahanBahanArray = bahanBahan
             .split(',')
             .map(line => line.trim())
@@ -352,7 +352,7 @@ const createRecipe = async (req, res) => {
             description,
             bahan: bahanBahanArray,
             langkah_pembuatan: langkahPembuatanArray,
-            asalDaerah,
+            asal_daerah : asalDaerah,
             author
         };
 
@@ -401,7 +401,7 @@ const updateRecipeData = async (req, res) => {
             description : updatedData.description,
             bahan: bahanBahanArray,
             langkah_pembuatan: langkahPembuatanArray,
-            "asal-daerah" : updatedData.asalDaerah,
+            asal_daerah : updatedData.asalDaerah,
             author : updatedData.author
         };
 

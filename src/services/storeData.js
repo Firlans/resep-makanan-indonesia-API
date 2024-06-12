@@ -136,10 +136,9 @@ const getRecipeById = async (id) => {
 //menambahkan bahan
 const addIngredient = async (ingredient, file) => {
     const imageUrl = await uploadImage(file, ingredient.id_picture);
-    const docRef = await db.collection('ingredients').add({
+    const docRef = await firestore.collection('ingredients').add({
         ...ingredient,
         id_picture: imageUrl,
-        normalized_name: ingredient.name.trim().toLowerCase()
     });
     const newIngredient = await docRef.get();
     return { id: newIngredient.id, ...newIngredient.data() };
@@ -159,8 +158,8 @@ const updateIngredient = async (id, updateData, file) => {
         const imageUrl = await uploadImage(file, `ingredent-${name}`);
         updateData.id_picture = imageUrl;
     }
-    await db.collection('ingredients').doc(id.toString()).update(updateData);
-    const updatedIngredient = await db.collection('ingredients').doc(id.toString()).get();
+    await firestore.collection('ingredients').doc(id.toString()).update(updateData);
+    const updatedIngredient = await firestore.collection('ingredients').doc(id.toString()).get();
     return { id: updatedIngredient.id, ...updatedIngredient.data() };
 };
 
@@ -174,7 +173,7 @@ const updateRecipe = async (id, updatedData) => {
 // menghapus bahan by id
 const deleteIngredientById = async (id) => {
     try {
-        await db.collection('ingredients').doc(id.toString()).delete();
+        await firestore.collection('ingredients').doc(id.toString()).delete();
     } catch (error) {
         console.error(error);
         return null;

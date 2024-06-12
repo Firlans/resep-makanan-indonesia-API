@@ -218,11 +218,6 @@ const editProfile = async (req, res) => {
   const user = req.user;
   const edited = req.query;
 
-  // data validation
-  if (!file) {
-    return res.status(400).json({ message: "Please upload a file!" });
-  }
-
   // data changed validation
   if (!edited) {
     res.status(400).json({
@@ -256,7 +251,9 @@ const editProfile = async (req, res) => {
       idAvatar: userData.idAvatar,
     };
     const newToken = generateToken(dataClient);
-    await uploadToGCS(file, idAvatar, avatarBucket);
+    if(file){
+      await uploadToGCS(file, idAvatar, avatarBucket);
+    }
     res.json({ message: "Profile updated successfully", token: newToken });
   } catch (error) {
     console.error(error);
