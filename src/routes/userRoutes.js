@@ -33,7 +33,6 @@ const {
     getRecipesByName
 } = require('../controllers/appController');
 const authorization = require("../services/auth");
-const { getIngredients } = require("../services/storeData");
 
 // konfigurasi multer
 const storage = multer.memoryStorage();
@@ -46,7 +45,7 @@ router.post("/login", login);
 router.post("/register", register);
 router.get("/verify-email", verifyEmail); // via email
 router.get("/profile", authorization, getProfile);
-outer.post("/forget-password", forgetPassword);
+router.post("/forget-password", forgetPassword);
 router.post(
   "/profile/edit",
   authorization,
