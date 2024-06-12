@@ -1,9 +1,10 @@
-const {Firestore} = require('@google-cloud/firestore');
+const { Firestore } = require('@google-cloud/firestore');
+require('dotenv').config();
 
-// Create a new client
+// create new client
 const firestore = new Firestore({
   projectId: process.env.ID_PROJECT,
-  keyFilename: process.env.SERVICE_ACCOUNT
+  keyFilename: process.env.SERVICE_ACCOUNT,
 });
 
 module.exports = firestore;
