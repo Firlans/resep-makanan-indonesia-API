@@ -1,3 +1,4 @@
+const { uploadToGCS } = require('../services/storage');
 const {
     getIngredients,
     getIngredientById,
@@ -329,7 +330,7 @@ const createRecipe = async (req, res) => {
     try {
         const { name, description, bahanBahan, langkahPembuatan, asalDaerah, author } = req.query;
         const file = req.file;
-
+        
         if (!name || !author) {
             return res.status(400).json({
                 status: 'fail',
@@ -353,9 +354,10 @@ const createRecipe = async (req, res) => {
             bahan: bahanBahanArray,
             langkah_pembuatan: langkahPembuatanArray,
             asal_daerah : asalDaerah,
-            author
-        };
-
+            author,
+            id_picture: file ? `recipe-picture-${name}` : "recipe-picture-default" 
+        };  
+        uploadToGCS(file, recipeData.id_picture, "recipes-image");
         const newRecipe = await addRecipe(recipeData);
         res.json({
             status: 'success',
