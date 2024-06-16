@@ -161,7 +161,7 @@ const getRecipeDetails = async (req, res) => {
                 data: recipe
             });
         } else {
-            res.json({
+            res.status(404).json({
                 status: 'failure',
                 message: 'Recipe not found'
             });
