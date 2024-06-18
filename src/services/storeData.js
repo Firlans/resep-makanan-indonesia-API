@@ -2,8 +2,8 @@ const firestore = require("./db");
 const { Storage } = require('@google-cloud/storage');
 const mime = require('mime-types');
 const storage = new Storage({
-    projectId: process.env.ID_PROJECT,
-    keyFilename: process.env.SERVICE_ACCOUNT,
+    projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
+    keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
 });
 
 // konfigurasi nama bucket
@@ -76,19 +76,18 @@ const uploadImage = async (file, filename) => {
         throw new Error('A file and a file name must be specified.');
     }
 
-
     // duplikasi gambar
     const blob = bucket.file(filename);
     const [exists] = await blob.exists();
     if (exists) {
-        // Hapus file jika ada
         await blob.delete();
     }
 
     const contentType = mime.lookup(file.originalname) || 'application/octet-stream';
+
     const blobStream = blob.createWriteStream({
         resumable: false,
-        contentType: contentType,  // Set the content type here
+        contentType: contentType,
     });
 
     return new Promise((resolve, reject) => {
@@ -145,8 +144,12 @@ const addIngredient = async (ingredient, file) => {
 };
 
 // menambahkan resep
-const addRecipe = async (recipe) => {
-    const docRef = await firestore.collection('recipes').add(recipe);
+const addRecipe = async (recipe, file) => {
+    const imageUrl = await uploadImage(file, recipe.id_picture);
+    const docRef = await firestore.collection('recipes').add({
+        ...recipe,
+        id_picture: imageUrl,
+    });
     const newRecipe = await docRef.get();
     return { id: newRecipe.id, ...newRecipe.data() };
 };
@@ -205,7 +208,6 @@ const deleteAllRecipes = async () => {
     await batch.commit();
 };
 
-// fungsi mendapatkan bahan berdasarkan nama
 // fungsi search bahan berdasarkan nama
 const searchIngredientsByName = async (name) => {
     const normalizedIngredientName = name.trim().toLowerCase().replace(/\s+/g, ''); // Normalisasi input dengan menghapus spasi

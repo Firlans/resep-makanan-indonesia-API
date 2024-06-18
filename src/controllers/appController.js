@@ -330,13 +330,13 @@ const createRecipe = async (req, res) => {
         const { name, description, bahanBahan, langkahPembuatan, asalDaerah, author } = req.query;
         const file = req.file;
 
-        if (!name || !author) {
+        if (!name || !author || !file) {
             return res.status(400).json({
                 status: 'fail',
-                message: 'silahkan isi nama dan author'
+                message: 'silahkan isi nama, gambar dan author'
             });
         }
-        
+
         const bahanBahanArray = bahanBahan
             .split(',')
             .map(line => line.trim())
@@ -352,14 +352,16 @@ const createRecipe = async (req, res) => {
             description,
             bahan: bahanBahanArray,
             langkah_pembuatan: langkahPembuatanArray,
-            asal_daerah : asalDaerah,
-            author
+            asal_daerah: asalDaerah,
+            author,
+            id_picture: file ? `recipe-picture-${name}` : "recipe-picture-default"
         };
 
-        const newRecipe = await addRecipe(recipeData);
+        // tambahkan resep
+        const newRecipe = await addRecipe(recipeData, file);
         res.json({
             status: 'success',
-            message: 'Bahan berhasil ditambahkan',
+            message: 'Resep berhasil ditambahkan',
             data: newRecipe
         });
     } catch (error) {
@@ -379,11 +381,11 @@ const updateRecipeData = async (req, res) => {
 
         const recipes = await getRecipes();
         const target = recipes.find(recipeData => recipeData.id === id);
-        if(!target){
+        if (!target) {
             return res.status(404).json({
                 status: "fail",
                 message: `ID ${id} tidak ditemukan`
-            })
+            });
         }
 
         const bahanBahanArray = updatedData.bahanBahan
@@ -396,13 +398,21 @@ const updateRecipeData = async (req, res) => {
             .map(line => line.trim())
             .filter(line => line.length > 0);
 
+        // Get all ingredients from database
+        const ingredients = await getIngredients();
+        const ingredientPictures = bahanBahanArray.map(bahan => {
+            const foundIngredient = ingredients.find(ingredient => ingredient.name.toLowerCase() === bahan.toLowerCase());
+            return foundIngredient ? foundIngredient.id_picture : null;
+        }).filter(pic => pic !== null);
+
         const updatedRecipeData = {
-            name : updatedData.name,
-            description : updatedData.description,
+            name: updatedData.name,
+            description: updatedData.description,
             bahan: bahanBahanArray,
             langkah_pembuatan: langkahPembuatanArray,
-            asal_daerah : updatedData.asalDaerah,
-            author : updatedData.author
+            asal_daerah: updatedData.asalDaerah,
+            author: updatedData.author,
+            id_picture: ingredientPictures.length > 0 ? ingredientPictures[0] : target.id_picture
         };
 
         const updatedRecipe = await updateRecipe(id, updatedRecipeData);
