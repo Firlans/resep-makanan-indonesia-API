@@ -35,20 +35,8 @@ const {
 const authorization = require("../services/auth");
 
 // konfigurasi multer
-const storage = multer.memoryStorage();
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-      fileSize: 5 * 1024 * 1024, // batas ukuran file 5MB
-  },
-  fileFilter: (req, file, cb) => {
-      if (file.mimetype.startsWith('image/')) {
-          cb(null, true);
-      } else {
-          cb(new Error('Hanya file gambar yang diizinkan!'), false);
-      }
-  }
-});
+const storage = multer.memoryStorage(); // Store files in memory
+const upload = multer({ storage: storage });
 
 const router = express.Router();
 

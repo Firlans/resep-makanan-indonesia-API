@@ -6,9 +6,11 @@ const storage = new Storage({
     keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
 });
 
-// konfigurasi nama bucket
-const bucketName = 'ingredient-details-recipes-api';
-const bucket = storage.bucket(bucketName);
+// Konfigurasi nama bucket
+const ingredientBucketName = 'ingredient-details-recipes-api';
+const recipeBucketName = 'recipes-image';
+const ingredientBucket = storage.bucket(ingredientBucketName);
+const recipeBucket = storage.bucket(recipeBucketName);
 
 // save data user
 const addUser = async (data) => {
@@ -71,12 +73,11 @@ const deleteUser = async (collectionName, documentId) => {
 }
 
 // fungsi untuk mengunggah gambar ke Cloud Storage
-const uploadImage = async (file, filename) => {
+const uploadImageToBucket = async (file, filename, bucket) => {
     if (!file || !filename) {
         throw new Error('A file and a file name must be specified.');
     }
 
-    // duplikasi gambar
     const blob = bucket.file(filename);
     const [exists] = await blob.exists();
     if (exists) {
@@ -98,6 +99,14 @@ const uploadImage = async (file, filename) => {
             reject(err);
         }).end(file.buffer);
     });
+};
+
+const uploadIngredientImage = async (file, filename) => {
+    return uploadImageToBucket(file, filename, ingredientBucket);
+};
+
+const uploadRecipeImage = async (file, filename) => {
+    return uploadImageToBucket(file, filename, recipeBucket);
 };
 
 // get all ingredients
@@ -134,7 +143,7 @@ const getRecipeById = async (id) => {
 
 //menambahkan bahan
 const addIngredient = async (ingredient, file) => {
-    const imageUrl = await uploadImage(file, ingredient.id_picture);
+    const imageUrl = await uploadIngredientImage(file, ingredient.id_picture);
     const docRef = await firestore.collection('ingredients').add({
         ...ingredient,
         id_picture: imageUrl,
@@ -145,7 +154,7 @@ const addIngredient = async (ingredient, file) => {
 
 // menambahkan resep
 const addRecipe = async (recipe, file) => {
-    const imageUrl = await uploadImage(file, recipe.id_picture);
+    const imageUrl = await uploadRecipeImage(file, recipe.id_picture);
     const docRef = await firestore.collection('recipes').add({
         ...recipe,
         id_picture: imageUrl,
