@@ -2,8 +2,8 @@ const firestore = require("./db");
 const { Storage } = require('@google-cloud/storage');
 const mime = require('mime-types');
 const storage = new Storage({
-    projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
-    keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+    projectId: process.env.ID_PROJECT,
+    keyFilename: process.env.SERVICE_ACCOUNT,
 });
 
 // Konfigurasi nama bucket
@@ -88,7 +88,9 @@ const uploadImageToBucket = async (file, filename, bucket) => {
 
     const blobStream = blob.createWriteStream({
         resumable: false,
-        contentType: contentType,
+        metadata: {
+            contentType: contentType, // Set the correct MIME type for the image
+        },
     });
 
     return new Promise((resolve, reject) => {

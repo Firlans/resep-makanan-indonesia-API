@@ -67,7 +67,7 @@ router.delete('/ingredient-deleteAll', deleteAllIngredientsData);
 router.get('/dashboard', getDashboard);
 
 // routes for recipe
-router.post('/recipe-post', upload.single('image'), createRecipe);
+router.post('/recipe-post', avatarStore.upload.single('image'), createRecipe);
 router.get('/recipe-detail/:id', getRecipeDetails);
 router.get('/all-recipes', getAllRecipes);
 router.put('/recipe-update/:id', updateRecipeData);
