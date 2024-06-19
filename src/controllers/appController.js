@@ -330,7 +330,7 @@ const createRecipe = async (req, res) => {
     try {
         const { name, description, bahanBahan, langkahPembuatan, asalDaerah, author } = req.query;
         const file = req.file;
-        
+
         if (!name || !author) {
             return res.status(400).json({
                 status: 'fail',
@@ -358,7 +358,7 @@ const createRecipe = async (req, res) => {
             id_picture: file ? `recipe-picture-${name}` : "recipe-picture-default"
         };
 
-        const newRecipe = await addRecipe(recipeData);
+        const newRecipe = await addRecipe(recipeData, file);
         res.json({
             status: 'success',
             message: 'Resep berhasil ditambahkan',
