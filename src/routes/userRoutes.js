@@ -58,8 +58,8 @@ router.delete("/delete-account", authorization, deleteAccount);
 // routes for ingredients
 router.get('/ingredients', getAllIngredients);
 router.get('/ingredient/:id', getIngredientsDetails);
-router.post('/ingredient-detail-post', upload.single('image'), createIngredient); // Middleware multer untuk single image upload
-router.put('/ingredient-update/:id', upload.single('image'), updateIngredientData);
+router.post('/ingredient-detail-post', avatarStore.upload.single('image'), createIngredient); // Middleware multer untuk single image upload
+router.put('/ingredient-update/:id', avatarStore.upload.single('image'), updateIngredientData);
 router.delete('/ingredient-delete/:id', deleteIngredient);
 router.delete('/ingredient-deleteAll', deleteAllIngredientsData);
 
