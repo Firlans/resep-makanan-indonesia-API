@@ -331,7 +331,7 @@ const createRecipe = async (req, res) => {
         const { name, description, bahanBahan, langkahPembuatan, asalDaerah, author } = req.query;
         const file = req.file;
 
-        if (!name || !author) {
+        if (!name || !author || !file) {
             return res.status(400).json({
                 status: 'fail',
                 message: 'silahkan isi nama, dan author'
